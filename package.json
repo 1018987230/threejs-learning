@@ -1,0 +1,89 @@
+{
+  "name": "nft",
+  "private": true,
+  "version": "0.0.0",
+  "main": "electron/main.js",
+  "author": {
+    "name": "wyx",
+    "email": "1018987230@qq.com"
+  },
+  "homepage": "./",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build  ",
+    "preview": "vite preview",
+    "electron": "wait-on tcp:8888 && cross-env NODE_ENV=development electron .",
+    "electron:serve": "concurrently -k \"npm run dev\" \"npm run electron\"",
+    "electron:linux": "vite build && electron-builder  --linux AppImage",
+    "electron:win": "vite build && electron-builder  --windows"
+  },
+  "build": {
+    "appId": "com.your-website.your-app",
+    "productName": "ElectronApp",
+    "copyright": "Copyright © 2021 <your-name>",
+    "mac": {
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "icon": "./public/greenBoy.png"
+    },
+    "linux": {
+      "icon": "./public/greenBoy.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist_electron"
+    }
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.0.4",
+    "@types/three": "^0.146.0",
+    "axios": "^0.27.2",
+    "browserify-zlib": "^0.2.0",
+    "compression-webpack-plugin": "^10.0.0",
+    "dat.gui": "^0.7.9",
+    "electron": "^21.3.1",
+    "element-plus": "^2.2.0",
+    "esbuild": "^0.15.7",
+    "events": "^3.3.0",
+    "fortmatic": "^2.4.0",
+    "gsap": "^3.5.1",
+    "http-server": "^14.1.1",
+    "jsencrypt": "^3.3.1",
+    "less": "^4.1.2",
+    "less-loader": "^10.2.0",
+    "patch-package": "^6.4.7",
+    "process": "^0.11.10",
+    "sass": "^1.52.3",
+    "scss": "^0.2.4",
+    "stream-browserify": "^3.0.0",
+    "style-resources-loader": "^1.5.0",
+    "three": "^0.146.0",
+    "vue": "^3.2.25",
+    "vue-router": "^4.1.2"
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "^4.7.1",
+    "@vitejs/plugin-vue": "^2.3.1",
+    "concurrently": "^7.6.0",
+    "cross-env": "^7.0.3",
+    "electron-builder": "^23.6.0",
+    "unplugin-auto-import": "^0.7.2",
+    "unplugin-vue-components": "^0.19.9",
+    "vite": "^2.9.7",
+    "vite-plugin-components": "^0.13.3",
+    "vite-plugin-style-import": "^2.0.0",
+    "vite-plugin-windicss": "^1.8.7",
+    "vue-cli-plugin-web3modal": "^1.1.0",
+    "wait-on": "^6.0.1",
+    "windicss": "^3.5.6"
+  }
+}
