@@ -1,246 +1,298 @@
 <template>
-    
-    <div></div>
-    <el-button @click="iJump">Jump</el-button>
+  <div></div>
+  <el-button style="position: absolute" @click="iJump">Jump</el-button>
 </template>
 
 <script setup>
-import { defineComponent, onMounted, ref } from 'vue'
-import { PerspectiveCamera, WebGLRenderer, Color, AxesHelper, MeshLambertMaterial, PlaneGeometry, Mesh, BoxGeometry, SphereGeometry, SpotLight, AmbientLight } from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { defineComponent, onMounted, ref } from "vue";
+import {
+  PerspectiveCamera,
+  WebGLRenderer,
+  Color,
+  AxesHelper,
+  MeshLambertMaterial,
+  PlaneGeometry,
+  Mesh,
+  BoxGeometry,
+  SphereGeometry,
+  SpotLight,
+  AmbientLight,
+} from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-import * as THREE from 'three';
+import * as THREE from "three";
 
-import Stats from 'three/addons/libs/stats.module.js';
-import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-import console from 'console';
-const api = { state: 'Walking' };
-
+import Stats from "three/addons/libs/stats.module.js";
+import { GUI } from "three/addons/libs/lil-gui.module.min.js";
+import console from "console";
+const api = { state: "Walking" };
 
 let container, stats, clock, gui, mixer, actions, activeAction, previousAction;
 let camera, scene, renderer, model, face;
 
+// 监听键盘是否按下,控制人物移动
+let keyCodeW = false;
+let keyCodeS = false;
+let keyCodeA = false;
+let keyCodeD = false;
+let keyCodeK = false; // 攻击
+document.addEventListener(
+  "keydown",
+  (e) => {
+    var ev = e || window.event;
+    switch (ev.keyCode) {
+      case 87:
+        keyCodeW = true;
+        model.position.z += 0.1
+        break;
+      case 83:
+        keyCodeS = true;
+        model.position.z -= 0.1
+        break;
+      case 65:
+        keyCodeA = true;
+        model.position.x -= 0.1
+        break;
+      case 68:
+        keyCodeD = true;
+        break;
+      case 75:
+        keyCodeK = true;
+        attack();
+        break;
+      default:
+        break;
+    }
+  },
+  false
+);
+document.addEventListener(
+  "keyup",
+  (e) => {
+    var ev = e || window.event;
+    switch (ev.keyCode) {
+      case 87:
+        keyCodeW = false;
+        break;
+      case 83:
+        keyCodeS = false;
+        break;
+      case 65:
+        keyCodeA = false;
+        break;
+      case 68:
+        keyCodeD = false;
+        break;
+      default:
+        break;
+    }
+  },
+  false
+);
 
 function init() {
+  container = document.createElement("div");
+  document.body.appendChild(container);
 
+  camera = new PerspectiveCamera(
+    45,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+  camera.position.set(-5, 3, 10);
 
-    container = document.createElement( 'div' );
-    document.body.appendChild( container );
+  clock = new THREE.Clock();
 
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xe0e0e0);
+  scene.fog = new THREE.Fog(0xe0e0e0, 20, 100);
 
-    camera = new PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000)
-    camera.position.set(-5,3,10)
-    camera.lookAt(0,2,0)
+  //光源效果
+  let sptLight = new SpotLight(0xffffff);
+  sptLight.position.set(0, 40, 40);
+  //sptLight.shadow.camera.near=40,
+  //sptLight.shadow.camera.far=-40,
+  //开启阴影
+  sptLight.castShadow = true;
+  scene.add(sptLight);
+  const ambientLight = new AmbientLight(0xcccccc);
+  // scene.add(ambientLight)
 
+  // 地板
+  const planeGeometry = new PlaneGeometry(1000, 1000);
+  const planeMaterial = new MeshLambertMaterial({ color: 0x77777ff });
+  const plane = new Mesh(planeGeometry, planeMaterial);
+  plane.rotation.x = -0.5 * Math.PI;
 
-    clock = new THREE.Clock();
+  //地面接受阴影
+  plane.receiveShadow = true;
+  scene.add(plane);
+  const grid = new THREE.GridHelper(200, 40, 0x000000, 0x000000);
+  grid.material.opacity = 0.2;
+  grid.material.transparent = true;
+  scene.add(grid);
 
-    scene = new THREE.Scene()
-    scene.background = new THREE.Color( 0xe0e0e0 );
-    scene.fog = new THREE.Fog( 0xe0e0e0, 20, 100 );
+  // model
+  const loader = new GLTFLoader();
+  loader.load(
+    "/RobotExpressive.glb",
+    function (gltf) {
+      model = gltf.scene;
+      scene.add(model);
 
+      createGUI(model, gltf.animations);
+    },
+    undefined,
+    function (e) {
+      console.error(e);
+    }
+  );
 
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputEncoding = THREE.sRGBEncoding;
 
-    //光源效果
-    let sptLight = new SpotLight(0xFFFFFF)
-    sptLight.position.set(0, 40, 40)
-    //sptLight.shadow.camera.near=40,
-    //sptLight.shadow.camera.far=-40,
-    //开启阴影
-    sptLight.castShadow = true
-    scene.add(sptLight)
-    const ambientLight = new AmbientLight(0xcccccc)
-    // scene.add(ambientLight)
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enablePan = false;
+  controls.enableZoom = false;
+  controls.target.set(0, 1, 0);
+  controls.update();
+  camera.lookAt(0, 2, 0);
 
+  container.appendChild(renderer.domElement);
 
-    // 地板
-    const planeGeometry = new PlaneGeometry(1000, 1000);
-    const planeMaterial = new MeshLambertMaterial({ color: 0x77777ff });
-    const plane = new Mesh(planeGeometry, planeMaterial)
-    plane.rotation.x = -0.5 * Math.PI
-
-    //地面接受阴影
-    plane.receiveShadow = true;
-    scene.add(plane)
-    const grid = new THREE.GridHelper( 200, 40, 0x000000, 0x000000 );
-    grid.material.opacity = 0.2;
-    grid.material.transparent = true;
-    scene.add( grid );
-
-
-    // model
-    const loader = new GLTFLoader();
-    loader.load('/RobotExpressive.glb', function (gltf) {
-        
-        model = gltf.scene;
-        scene.add(model);
-
-        createGUI( model, gltf.animations );
-
-    }, undefined, function (e) {
-
-        console.error(e);
-
-    });
-    
-
-    renderer = new THREE.WebGLRenderer( { antialias: true } );
-    renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    container.appendChild( renderer.domElement );
-
-    window.addEventListener( 'resize', onWindowResize );
-
-
+  window.addEventListener("resize", onWindowResize);
 }
 
-function createGUI( model, animations ) {
+function createGUI(model, animations) {
+  const states = [
+    "Idle",
+    "Walking",
+    "Running",
+    "Dance",
+    "Death",
+    "Sitting",
+    "Standing",
+  ];
+  const emotes = ["Jump", "Yes", "No", "Wave", "Punch", "ThumbsUp"];
 
-    const states = [ 'Idle', 'Walking', 'Running', 'Dance', 'Death', 'Sitting', 'Standing' ];
-    const emotes = [ 'Jump', 'Yes', 'No', 'Wave', 'Punch', 'ThumbsUp' ];
+  gui = new GUI();
 
-    gui = new GUI();
+  mixer = new THREE.AnimationMixer(model);
 
-    mixer = new THREE.AnimationMixer( model );
+  actions = {};
 
-
-    actions = {};
-   
-    for ( let i = 0; i < animations.length; i ++ ) {
-
-        const clip = animations[ i ];
-        const action = mixer.clipAction( clip );
-        actions[ clip.name ] = action;
-        if ( emotes.indexOf( clip.name ) >= 0 || states.indexOf( clip.name ) >= 4 ) {
-
-            action.clampWhenFinished = true;
-            action.loop = THREE.LoopOnce;
-
-        }
-
+  for (let i = 0; i < animations.length; i++) {
+    const clip = animations[i];
+    const action = mixer.clipAction(clip);
+    actions[clip.name] = action;
+    if (emotes.indexOf(clip.name) >= 0 || states.indexOf(clip.name) >= 4) {
+      action.clampWhenFinished = true;
+      action.loop = THREE.LoopOnce;
     }
+  }
 
-    // states
+  // states
 
-    const statesFolder = gui.addFolder( 'States' );
+  const statesFolder = gui.addFolder("States");
 
-    const clipCtrl = statesFolder.add( api, 'state' ).options( states );
+  const clipCtrl = statesFolder.add(api, "state").options(states);
 
-    clipCtrl.onChange( function () {
-        fadeToAction( api.state, 0.5 );
-    } );
+  clipCtrl.onChange(function () {
+    fadeToAction(api.state, 0.5);
+  });
 
-    statesFolder.open();
+  statesFolder.open();
 
-    // emotes
+  // emotes
 
-    const emoteFolder = gui.addFolder( 'Emotes' );
+  const emoteFolder = gui.addFolder("Emotes");
 
-    function createEmoteCallback( name ) {
+  function createEmoteCallback(name) {
+    api[name] = function () {
+      fadeToAction(name, 0.2);
 
-        api[ name ] = function () {
+      mixer.addEventListener("finished", restoreState);
+    };
 
-            fadeToAction( name, 0.2 );
+    emoteFolder.add(api, name);
+  }
 
-            mixer.addEventListener( 'finished', restoreState );
+  function restoreState() {
+    mixer.removeEventListener("finished", restoreState);
 
-        };
+    fadeToAction(api.state, 0.2);
+  }
 
-        emoteFolder.add( api, name );
+  for (let i = 0; i < emotes.length; i++) {
+    createEmoteCallback(emotes[i]);
+  }
 
-    }
+  emoteFolder.open();
 
-    function restoreState() {
+  // expressions
 
-        mixer.removeEventListener( 'finished', restoreState );
+  face = model.getObjectByName("Head_4");
 
-        fadeToAction( api.state, 0.2 );
+  const expressions = Object.keys(face.morphTargetDictionary);
+  const expressionFolder = gui.addFolder("Expressions");
 
-    }
+  for (let i = 0; i < expressions.length; i++) {
+    expressionFolder
+      .add(face.morphTargetInfluences, i, 0, 1, 0.01)
+      .name(expressions[i]);
+  }
 
-    for ( let i = 0; i < emotes.length; i ++ ) {
-        createEmoteCallback( emotes[ i ] );
+  activeAction = actions["Walking"];
+  activeAction.play();
 
-    }
-
-    emoteFolder.open();
-
-    // expressions
-
-    face = model.getObjectByName( 'Head_4' );
-
-    const expressions = Object.keys( face.morphTargetDictionary );
-    const expressionFolder = gui.addFolder( 'Expressions' );
-
-    for ( let i = 0; i < expressions.length; i ++ ) {
-
-        expressionFolder.add( face.morphTargetInfluences, i, 0, 1, 0.01 ).name( expressions[ i ] );
-
-    }
-
-    activeAction = actions[ 'Walking' ];
-    activeAction.play();
-
-    expressionFolder.open();
-
+  expressionFolder.open();
 }
 
-function fadeToAction( name, duration ) {
+function fadeToAction(name, duration) {
+  previousAction = activeAction;
+  activeAction = actions[name];
 
-    previousAction = activeAction;
-    activeAction = actions[ name ];
+  if (previousAction !== activeAction) {
+    previousAction.fadeOut(duration);
+  }
 
-    if ( previousAction !== activeAction ) {
-
-        previousAction.fadeOut( duration );
-
-    }
-
-    activeAction
-        .reset()
-        .setEffectiveTimeScale( 1 )
-        .setEffectiveWeight( 1 )
-        .fadeIn( duration )
-        .play();
-
+  activeAction
+    .reset()
+    .setEffectiveTimeScale(1)
+    .setEffectiveWeight(1)
+    .fadeIn(duration)
+    .play();
 }
-
-
 
 function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
 
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize( window.innerWidth, window.innerHeight );
-
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }
 function animate() {
+  const dt = clock.getDelta();
 
-    const dt = clock.getDelta();
+  if (mixer) mixer.update(dt);
 
-    if ( mixer ) mixer.update( dt );
+  requestAnimationFrame(animate);
 
-    requestAnimationFrame( animate );
+  renderer.render(scene, camera);
 
-    renderer.render( scene, camera );
-
-    // stats.update();
-
+  // stats.update();
 }
-
 
 onMounted(() => {
-    init();
-    animate()
-})
+  init();
+  animate();
+});
 
-const iJump = () =>{
-    fadeToAction( 'Running', 0.5 )
-
-}
-
-
+const iJump = () => {
+  fadeToAction("Running", 0.5);
+  model.position.z += 1
+};
 </script>
