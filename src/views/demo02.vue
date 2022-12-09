@@ -1,6 +1,5 @@
 <template>
   <div></div>
-  <el-button style="position: absolute" @click="iJump">Jump</el-button>
 </template>
 
 <script setup>
@@ -26,6 +25,8 @@ import * as THREE from "three";
 import Stats from "three/addons/libs/stats.module.js";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import console from "console";
+
+
 const api = { state: "Walking" };
 
 let container, stats, clock, gui, mixer, actions, activeAction, previousAction;
@@ -37,61 +38,65 @@ let keyCodeS = false;
 let keyCodeA = false;
 let keyCodeD = false;
 let keyCodeK = false; // 攻击
-document.addEventListener(
-  "keydown",
-  (e) => {
-    var ev = e || window.event;
-    switch (ev.keyCode) {
-      case 87:
-        keyCodeW = true;
-        model.position.z += 0.1
-        break;
-      case 83:
-        keyCodeS = true;
-        model.position.z -= 0.1
-        break;
-      case 65:
-        keyCodeA = true;
-        model.position.x -= 0.1
-        break;
-      case 68:
-        keyCodeD = true;
-        break;
-      case 75:
-        keyCodeK = true;
-        attack();
-        break;
-      default:
-        break;
-    }
-  },
-  false
-);
-document.addEventListener(
-  "keyup",
-  (e) => {
-    var ev = e || window.event;
-    switch (ev.keyCode) {
-      case 87:
-        keyCodeW = false;
-        break;
-      case 83:
-        keyCodeS = false;
-        break;
-      case 65:
-        keyCodeA = false;
-        break;
-      case 68:
-        keyCodeD = false;
-        break;
-      default:
-        break;
-    }
-  },
-  false
-);
+
 
 function init() {
+
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      var ev = e || window.event;
+      switch (ev.keyCode) {
+        case 87:
+          keyCodeW = true;
+          frontMove()
+          break;
+        case 83:
+          keyCodeS = true;
+          backMove()
+          break;
+        case 65:
+          keyCodeA = true;
+          leftMove()
+          break;
+        case 68:
+          keyCodeD = true;
+          break;
+        case 75:
+          keyCodeK = true;
+          attack();
+          break;
+        default:
+          break;
+      }
+    },
+    false
+  );
+  document.addEventListener(
+    "keyup",
+    (e) => {
+      var ev = e || window.event;
+      switch (ev.keyCode) {
+        case 87:
+          keyCodeW = false;
+          stopMove()
+          break;
+        case 83:
+          keyCodeS = false;
+          break;
+        case 65:
+          keyCodeA = false;
+          break;
+        case 68:
+          keyCodeD = false;
+          break;
+        default:
+          break;
+      }
+    },
+    false
+  );
+
   container = document.createElement("div");
   document.body.appendChild(container);
 
@@ -101,7 +106,7 @@ function init() {
     0.1,
     1000
   );
-  camera.position.set(-5, 3, 10);
+  camera.position.set(-5, 50, 10);
 
   clock = new THREE.Clock();
 
@@ -156,8 +161,8 @@ function init() {
   renderer.outputEncoding = THREE.sRGBEncoding;
 
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enablePan = false;
-  controls.enableZoom = false;
+  controls.enablePan = true;
+  controls.enableZoom = true;
   controls.target.set(0, 1, 0);
   controls.update();
   camera.lookAt(0, 2, 0);
@@ -165,6 +170,48 @@ function init() {
   container.appendChild(renderer.domElement);
 
   window.addEventListener("resize", onWindowResize);
+
+
+  let time = Date.now()
+  function frontMove() {
+    const delta = clock.getDelta();
+    console.log(api.state)
+    if(api.state != "Walking") {
+      fadeToAction('Walking',0.2)
+      api.state = 'Walking'
+    }
+    const currentTime = Date.now()
+    const deltaTime = currentTime - time
+    time = currentTime
+    model.position.z += 0.001 * deltaTime
+  }
+  function stopMove() {
+    fadeToAction('Standing',0.2)
+    api.state= 'Standing'
+  }
+
+  function backMove() {
+    const currentTime = Date.now()
+    const deltaTime = currentTime - time
+    time = currentTime
+
+    model.position.z -= 0.01 * deltaTime
+  }
+  function leftMove() {
+    const currentTime = Date.now()
+    const deltaTime = currentTime - time
+    time = currentTime
+    model.rotation.y += 0.01 * deltaTime
+  }
+  function rightMove() {
+    const currentTime = Date.now()
+    const deltaTime = currentTime - time
+    time = currentTime
+    model.position.z += 0.01 * deltaTime
+  }
+
+
+
 }
 
 function createGUI(model, animations) {
@@ -250,6 +297,10 @@ function createGUI(model, animations) {
   activeAction.play();
 
   expressionFolder.open();
+
+  let time = Date.now()
+
+
 }
 
 function fadeToAction(name, duration) {
@@ -274,6 +325,7 @@ function onWindowResize() {
 
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
+
 function animate() {
   const dt = clock.getDelta();
 
@@ -286,13 +338,10 @@ function animate() {
   // stats.update();
 }
 
+
 onMounted(() => {
   init();
   animate();
-});
+})
 
-const iJump = () => {
-  fadeToAction("Running", 0.5);
-  model.position.z += 1
-};
 </script>
